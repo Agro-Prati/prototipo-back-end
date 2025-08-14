@@ -1,0 +1,14 @@
+create table cliente(
+	id uuid not null primary key,
+	name varchar not null,
+	email varchar not null,
+	password varchar not null,
+	role uuid not null references role(id)
+)
+
+create table role(
+
+	id uuid not null primary key,
+	name varchar not null
+
+)
