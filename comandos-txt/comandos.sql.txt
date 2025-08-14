@@ -1,12 +1,12 @@
-create table cliente(
+create table tb_user(
 	id uuid not null primary key,
 	name varchar not null,
 	email varchar not null,
 	password varchar not null,
-	role uuid not null references role(id)
+	role uuid not null references tb_role(id)
 )
 
-create table role(
+create table tb_role(
 
 	id uuid not null primary key,
 	name varchar not null
