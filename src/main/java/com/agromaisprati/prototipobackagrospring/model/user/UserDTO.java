@@ -21,7 +21,4 @@ public class UserDTO {
     @NotBlank(message = "Password is required")
     private String password;
 
-    @NotBlank(message = "")
-    private UUID roleId;
-
 }

@@ -7,8 +7,12 @@ create table tb_user(
 )
 
 create table tb_role(
-
 	id uuid not null primary key,
 	name varchar not null
-
 )
+
+insert into tb_role
+(id, name)
+values
+('f4ac56f8-3f81-45fd-8738-ff4aaad7db52', 'ADMIN'),
+('c797f1b1-d0b3-415b-a8f1-4fc1281af09f', 'USER')

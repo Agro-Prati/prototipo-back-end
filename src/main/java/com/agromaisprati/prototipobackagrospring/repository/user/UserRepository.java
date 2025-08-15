@@ -1,4 +1,4 @@
-package com.agromaisprati.prototipobackagrospring.repository;
+package com.agromaisprati.prototipobackagrospring.repository.user;
 
 import com.agromaisprati.prototipobackagrospring.model.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
