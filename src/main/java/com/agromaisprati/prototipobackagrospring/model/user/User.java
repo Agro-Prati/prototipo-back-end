@@ -1,5 +1,6 @@
-package com.agromaisprati.prototipobackagrospring.model;
+package com.agromaisprati.prototipobackagrospring.model.user;
 
+import com.agromaisprati.prototipobackagrospring.model.role.Role;
 import jakarta.persistence.*;
 import lombok.Data;
 
