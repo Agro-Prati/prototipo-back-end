@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: prototipo-back-agro-spring
+
+server:
+  port: 8081

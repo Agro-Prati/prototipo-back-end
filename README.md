@@ -248,7 +248,7 @@ chmod +x mvnw
 
 ### Porta 8080 ocupada
 ```bash
-# Alterar porta no application.properties
+# Alterar porta no application.yml
 server.port=8081
 
 # Ou definir via variável de ambiente
