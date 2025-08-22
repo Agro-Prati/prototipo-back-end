@@ -101,8 +101,8 @@ ALTER TABLE public.tb_user OWNER TO postgres;
 -- Data for Name: tb_role; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.tb_role (id, name) VALUES ('f4ac56f8-3f81-45fd-8738-ff4aaad7db52', 'ADMIN');
-INSERT INTO public.tb_role (id, name) VALUES ('c797f1b1-d0b3-415b-a8f1-4fc1281af09f', 'USER');
+INSERT INTO public.tb_role (id, name) VALUES ('f4ac56f8-3f81-45fd-8738-ff4aaad7db52', 'ROLE_ADMIN');
+INSERT INTO public.tb_role (id, name) VALUES ('c797f1b1-d0b3-415b-a8f1-4fc1281af09f', 'ROLE_USER');
 
 
 --

@@ -5,10 +5,12 @@ import lombok.Data;
 
 import java.util.UUID;
 
+import org.springframework.security.core.GrantedAuthority;
+
 @Data
 @Entity
 @Table(name = "tb_role")
-public class Role {
+public class Role implements GrantedAuthority {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -17,5 +19,10 @@ public class Role {
 
     @Column(name = "name")
     private String name;
+
+    @Override
+    public String getAuthority() {
+        return name;
+    }
 
 }

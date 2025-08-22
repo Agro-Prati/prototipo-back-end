@@ -39,7 +39,7 @@ public class UserController implements GenericController {
     private final UserMapper userMapper;
 
     @PreAuthorize("permitAll()")
-    @PostMapping("/public/auth/register")
+    @PostMapping("/public/users/register")
     public ResponseEntity<Void> registerUser(@RequestBody UserDTO response) {
         return ResponseEntity.created(generatorDefaultHeaderLocation(userService.registerUser(userMapper.toEntity(response)).getId())).build();
     }
