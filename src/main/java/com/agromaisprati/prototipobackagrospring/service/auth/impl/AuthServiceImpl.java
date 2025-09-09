@@ -15,7 +15,7 @@ import com.agromaisprati.prototipobackagrospring.controller.exceptions.Unauthori
 import com.agromaisprati.prototipobackagrospring.model.auth.LoginRequestDto;
 import com.agromaisprati.prototipobackagrospring.model.auth.TokenResponseDto;
 import com.agromaisprati.prototipobackagrospring.model.user.User;
-import com.agromaisprati.prototipobackagrospring.model.user.UserDTO;
+import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
 import com.agromaisprati.prototipobackagrospring.repository.role.RoleRepository;
 import com.agromaisprati.prototipobackagrospring.repository.user.UserRepository;
 import com.agromaisprati.prototipobackagrospring.service.auth.AuthService;
@@ -48,7 +48,7 @@ public class AuthServiceImpl implements AuthService {
     private boolean isCookieSecure;
 
     @Override
-    public void register(UserDTO dto) {
+    public void register(UserDto dto) {
         userValidator.hasEmail(dto.getEmail());
         User user = new User();
         user.setEmail(dto.getEmail());

@@ -1,6 +1,7 @@
 package com.agromaisprati.prototipobackagrospring.controller.common;
 
 import com.agromaisprati.prototipobackagrospring.controller.exceptions.BadRequestExceptionCustom;
+import com.agromaisprati.prototipobackagrospring.controller.exceptions.ConflictException;
 import com.agromaisprati.prototipobackagrospring.controller.exceptions.NotFoundException;
 import com.agromaisprati.prototipobackagrospring.controller.exceptions.UnauthorizedException;
 
@@ -61,6 +62,15 @@ public class GlobalHandlerException {
     public ExceptionResponse notFoundException(NotFoundException ex) {
         return new ExceptionResponse(
                 HttpStatus.NOT_FOUND.value(),
+                ex.getMessage()
+        );
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(ConflictException.class)
+    public ExceptionResponse conflictException(ConflictException ex) {
+        return new ExceptionResponse(
+                HttpStatus.CONFLICT.value(),
                 ex.getMessage()
         );
     }

@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.agromaisprati.prototipobackagrospring.model.auth.LoginRequestDto;
 import com.agromaisprati.prototipobackagrospring.model.auth.TokenResponseDto;
-import com.agromaisprati.prototipobackagrospring.model.user.UserDTO;
+import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
 import com.agromaisprati.prototipobackagrospring.service.auth.AuthService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,7 +25,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<Void> register(@RequestBody @Valid UserDTO dto) {
+    public ResponseEntity<Void> register(@RequestBody @Valid UserDto dto) {
         authService.register(dto);
         return ResponseEntity.status(201).build();
     }
