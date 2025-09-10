@@ -17,8 +17,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ExceptionResponse {
 
-
-
     private int status;
     private String message;
 

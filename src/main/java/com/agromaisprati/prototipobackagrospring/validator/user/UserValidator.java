@@ -1,6 +1,6 @@
 package com.agromaisprati.prototipobackagrospring.validator.user;
 
-import com.agromaisprati.prototipobackagrospring.controller.exceptions.BadRequestExceptionCustom;
+import com.agromaisprati.prototipobackagrospring.controller.exceptions.ConflictException;
 import com.agromaisprati.prototipobackagrospring.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -13,7 +13,7 @@ public class UserValidator {
 
     public void hasEmail(String email) {
         if (userRepository.existsByEmail(email)) {
-            throw new BadRequestExceptionCustom("Email is already registered.");
+            throw new ConflictException("Email is already registered.");
         }
     }
 

@@ -1,8 +1,12 @@
 package com.agromaisprati.prototipobackagrospring.controller.common;
 
 import com.agromaisprati.prototipobackagrospring.controller.exceptions.BadRequestExceptionCustom;
+import com.agromaisprati.prototipobackagrospring.controller.exceptions.ConflictException;
 import com.agromaisprati.prototipobackagrospring.controller.exceptions.NotFoundException;
+import com.agromaisprati.prototipobackagrospring.controller.exceptions.UnauthorizedException;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -31,11 +35,42 @@ public class GlobalHandlerException {
         );
     }
 
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ValidationExceptionResponse validationException(MethodArgumentNotValidException ex) {
+        ValidationExceptionResponse response = new ValidationExceptionResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Invalid data"
+        );
+        ex.getBindingResult().getFieldErrors().forEach(error -> {
+            response.addError(error.getDefaultMessage());
+        });
+        return response;
+    }
+
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ExceptionHandler(UnauthorizedException.class)
+    public ExceptionResponse unauthorized(UnauthorizedException ex) {
+        return new ExceptionResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                ex.getMessage()
+        );
+    }
+
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(NotFoundException.class)
     public ExceptionResponse notFoundException(NotFoundException ex) {
         return new ExceptionResponse(
                 HttpStatus.NOT_FOUND.value(),
+                ex.getMessage()
+        );
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(ConflictException.class)
+    public ExceptionResponse conflictException(ConflictException ex) {
+        return new ExceptionResponse(
+                HttpStatus.CONFLICT.value(),
                 ex.getMessage()
         );
     }

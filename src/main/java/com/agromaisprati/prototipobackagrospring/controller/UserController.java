@@ -1,13 +1,23 @@
 package com.agromaisprati.prototipobackagrospring.controller;
 
-import com.agromaisprati.prototipobackagrospring.controller.mapper.user.UserMapper;
-import com.agromaisprati.prototipobackagrospring.model.user.UserDTO;
+import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
+import com.agromaisprati.prototipobackagrospring.model.user.UserResponseDto;
 import com.agromaisprati.prototipobackagrospring.service.user.UserService;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,22 +36,43 @@ import org.springframework.web.bind.annotation.RestController;
  * recebendo os serviços necessários para realizar o mapeamento e persistência do usuário.
  *
  * Endpoint exposto:
- * - POST /api/public/auth/register → registra um novo usuário
+ * - POST /api/public/users → registra um novo usuário
  */
 
 @RequiredArgsConstructor
 @RestController
 @EnableWebSecurity
-@RequestMapping("/api/")
+@RequestMapping("/api/public/users")
 public class UserController implements GenericController {
 
     private final UserService userService;
-    private final UserMapper userMapper;
 
-    @PreAuthorize("permitAll()")
-    @PostMapping("/public/auth/register")
-    public ResponseEntity<Void> registerUser(@RequestBody UserDTO response) {
-        return ResponseEntity.created(generatorDefaultHeaderLocation(userService.registerUser(userMapper.toEntity(response)).getId())).build();
+    @GetMapping
+    public ResponseEntity<Page<UserResponseDto>> findAllUsers(Pageable pageable) {
+        return ResponseEntity.ok(this.userService.findAllUsers(pageable));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserResponseDto> findUserById(@PathVariable String id) {
+        return ResponseEntity.ok(userService.findUserById(id));
+    }
+
+    @PostMapping
+    public ResponseEntity<Void> registerUser(@Valid @RequestBody UserDto dto) {
+        UserResponseDto user = userService.createUser(dto);
+        return ResponseEntity.created(generatorDefaultHeaderLocation(UUID.fromString(user.id()))).build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Void> updateUser(@PathVariable String id, @Valid @RequestBody UserDto dto) {
+        userService.updateUser(id, dto);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable String id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 
 }

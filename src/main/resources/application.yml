@@ -5,14 +5,30 @@ spring:
   datasource:
     username: postgres
     password: postgres
-    driver: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/agro_prototipo_db
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5433/agro_prototipo_db
   jpa:
     show-sql: true
     hibernate:
       ddl-auto: none
     properties:
-      hibernate.format-sql: true
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  cache:
+    type: redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+jwt:
+  secret: ${JWT_SECRET:N7p3xY9kL4tQ2sM8uB5jH0zR6cA1vF7g}
+  access-token:
+    duration: ${ACCESS_TOKEN_DURATION:1}
+  refresh-token:
+    duration: ${REFRESH_TOKEN_DURATION:30}
+  cookie:
+    secure: ${JWT_COOKIE_SECURE:false}
 
 server:
-  port: 8081
+  port: 8080

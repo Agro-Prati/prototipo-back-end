@@ -1,9 +1,17 @@
 package com.agromaisprati.prototipobackagrospring.service.user;
 
-import com.agromaisprati.prototipobackagrospring.model.user.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
+import com.agromaisprati.prototipobackagrospring.model.user.UserResponseDto;
 
 public interface UserService {
 
-    User registerUser(User user);
+    Page<UserResponseDto> findAllUsers(Pageable pageable);
+    UserResponseDto findUserById(String id);
+    UserResponseDto createUser(UserDto dto);
+    void updateUser(String id, UserDto dto);
+    void deleteUser(String id);
 
 }
