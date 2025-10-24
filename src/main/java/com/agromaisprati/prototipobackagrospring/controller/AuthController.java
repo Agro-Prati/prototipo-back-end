@@ -1,51 +1,50 @@
 package com.agromaisprati.prototipobackagrospring.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
 import com.agromaisprati.prototipobackagrospring.model.auth.LoginRequestDto;
 import com.agromaisprati.prototipobackagrospring.model.auth.TokenResponseDto;
 import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
 import com.agromaisprati.prototipobackagrospring.service.auth.AuthService;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
+/**
+ * Controller de autenticação - Endpoints públicos para registro e login
+ */
+@Tag(name = "Autenticação", description = "Endpoints públicos para registro e login de usuários")
 @RestController
-@RequestMapping("/api/public/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
 
+    @Operation(summary = "Registrar novo usuário", 
+               description = "Cria uma nova conta e retorna o token JWT para autenticação imediata")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "Usuário criado com sucesso - Token JWT retornado"),
+        @ApiResponse(responseCode = "400", description = "Dados inválidos - Verifique o formato dos campos"),
+        @ApiResponse(responseCode = "409", description = "Email já cadastrado")
+    })
     @PostMapping("/register")
-    public ResponseEntity<Void> register(@RequestBody @Valid UserDto dto) {
-        authService.register(dto);
-        return ResponseEntity.status(201).build();
+    public ResponseEntity<TokenResponseDto> register(@Valid @RequestBody UserDto dto) {
+        TokenResponseDto response = authService.register(dto);
+        return ResponseEntity.status(201).body(response);
     }
 
+    @Operation(summary = "Fazer login", 
+               description = "Autentica um usuário existente e retorna token JWT")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Login realizado com sucesso - Token JWT retornado"),
+        @ApiResponse(responseCode = "401", description = "Credenciais inválidas - Email ou senha incorretos")
+    })
     @PostMapping("/login")
-    public ResponseEntity<TokenResponseDto> login(@RequestBody @Valid LoginRequestDto login, HttpServletResponse response) {
-        return ResponseEntity.ok(authService.login(login, response));
+    public ResponseEntity<TokenResponseDto> login(@Valid @RequestBody LoginRequestDto login) {
+        return ResponseEntity.ok(authService.login(login));
     }
-
-    @PostMapping("/refresh-token")
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
-    public ResponseEntity<TokenResponseDto> refreshToken(HttpServletRequest request) {
-        return ResponseEntity.ok(authService.refreshToken(request));
-    }
-
-    @PostMapping("/logout")
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
-    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
-        authService.logout(request, response);
-        return ResponseEntity.noContent().build();
-    }
-
 }

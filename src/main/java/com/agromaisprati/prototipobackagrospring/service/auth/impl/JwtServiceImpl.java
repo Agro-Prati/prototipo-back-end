@@ -1,80 +1,84 @@
 package com.agromaisprati.prototipobackagrospring.service.auth.impl;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.UUID;
-
+import com.agromaisprati.prototipobackagrospring.service.auth.JwtService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.JwsHeader;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-import com.agromaisprati.prototipobackagrospring.controller.exceptions.UnauthorizedException;
-import com.agromaisprati.prototipobackagrospring.service.auth.JwtService;
-
-import lombok.RequiredArgsConstructor;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 
 @Service
-@RequiredArgsConstructor
 public class JwtServiceImpl implements JwtService {
 
-    private final JwtEncoder jwtEncoder;
-    private final JwtDecoder jwtDecoder;
+    @Value("${jwt.secret}")
+    private String secretKey;
 
-    @Value("${jwt.access-token.duration}")
-    private int accessTokenDuration;
-    @Value("${jwt.refresh-token.duration}")
-    private int refreshTokenDuration;
-    private String issuer = "prototipo-back-agro-spring";
+    @Value("${jwt.expiration}")
+    private Long jwtExpiration;
 
     @Override
-    public Jwt encodeAccessToken(Authentication authentication) {
-        String accessTokenId = UUID.randomUUID().toString();
-        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-            .issuer(issuer)
-            .id(accessTokenId)
-            .subject(authentication.getName())
-            .claim("username", authentication.getName())
-            .claim("authorities", authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList())
-            .issuedAt(Instant.now())
-            .expiresAt(Instant.now().plus(Duration.ofDays(accessTokenDuration)))
-            .build();
-        return this.jwtEncoder.encode(JwtEncoderParameters.from(header, claims));
+    public String generateToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+        return createToken(claims, userDetails.getUsername());
+    }
+
+    private String createToken(Map<String, Object> claims, String subject) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpiration);
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(subject)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
     }
 
     @Override
-    public Jwt encodeRefreshToken(Authentication authentication) {
-        String refreshTokenId = UUID.randomUUID().toString();
-        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-            .issuer(issuer)
-            .id(refreshTokenId)
-            .subject(authentication.getName())
-            .claim("username", authentication.getName())
-            .issuedAt(Instant.now())
-            .expiresAt(Instant.now().plus(Duration.ofDays(refreshTokenDuration)))
-            .build();
-        return this.jwtEncoder.encode(JwtEncoderParameters.from(header, claims));
+    public String extractUsername(String token) {
+        return extractClaim(token, Claims::getSubject);
     }
 
     @Override
-    public Jwt decodeJwt(String token) {
-        try {
-            return this.jwtDecoder.decode(token);
-        }
-        catch (Exception e) {
-            throw new UnauthorizedException("Invalid token");
-        }
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
     }
 
-    
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
 
+    private Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    @Override
+    public Boolean validateToken(String token, UserDetails userDetails) {
+        final String username = extractUsername(token);
+        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
+
+    private Boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    private SecretKey getSigningKey() {
+        byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
 }

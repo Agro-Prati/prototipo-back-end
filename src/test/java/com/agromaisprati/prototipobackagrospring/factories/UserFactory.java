@@ -2,6 +2,7 @@ package com.agromaisprati.prototipobackagrospring.factories;
 
 import java.util.UUID;
 
+import com.agromaisprati.prototipobackagrospring.model.user.TipoUsuario;
 import com.agromaisprati.prototipobackagrospring.model.user.User;
 import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
 
@@ -13,7 +14,9 @@ public class UserFactory {
         user.setName("John Doe");
         user.setEmail("john.doe@example.com");
         user.setPassword("password");
-        user.setRole(RoleFactory.createRole());
+        user.setType(TipoUsuario.AGRICULTOR);
+        user.setCity("Porto Alegre");
+        user.setState("RS");
         return user;
     }
 
@@ -22,6 +25,9 @@ public class UserFactory {
         dto.setName("John Doe");
         dto.setEmail("john.doe@example.com");
         dto.setPassword("password");
+        dto.setType(TipoUsuario.AGRICULTOR);
+        dto.setCity("Porto Alegre");
+        dto.setState("RS");
         return dto;
     }
 

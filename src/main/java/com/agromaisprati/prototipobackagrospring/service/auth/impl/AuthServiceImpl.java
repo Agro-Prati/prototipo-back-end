@@ -1,127 +1,63 @@
 package com.agromaisprati.prototipobackagrospring.service.auth.impl;
 
-import java.time.Duration;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseCookie;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.stereotype.Service;
-
-import com.agromaisprati.prototipobackagrospring.controller.exceptions.UnauthorizedException;
 import com.agromaisprati.prototipobackagrospring.model.auth.LoginRequestDto;
 import com.agromaisprati.prototipobackagrospring.model.auth.TokenResponseDto;
 import com.agromaisprati.prototipobackagrospring.model.user.User;
 import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
-import com.agromaisprati.prototipobackagrospring.repository.role.RoleRepository;
 import com.agromaisprati.prototipobackagrospring.repository.user.UserRepository;
 import com.agromaisprati.prototipobackagrospring.service.auth.AuthService;
-import com.agromaisprati.prototipobackagrospring.service.auth.BlackListTokenService;
 import com.agromaisprati.prototipobackagrospring.service.auth.JwtService;
-import com.agromaisprati.prototipobackagrospring.service.auth.RefreshTokenService;
-import com.agromaisprati.prototipobackagrospring.validator.user.UserValidator;
-
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final RefreshTokenService refreshTokenService;
-    private final BlackListTokenService blackListTokenService;
     private final AuthenticationManager authenticationManager;
-    private final UserValidator userValidator;
-
-    @Value("${jwt.refresh-token.duration}")
-    private int refreshTokenDuration;
-    @Value("${jwt.cookie.secure}")
-    private boolean isCookieSecure;
 
     @Override
-    public void register(UserDto dto) {
-        userValidator.hasEmail(dto.getEmail());
+    public TokenResponseDto register(UserDto dto) {
+        // Validar se email já existe
+        if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
+            throw new RuntimeException("Email já cadastrado");
+        }
+
         User user = new User();
-        user.setEmail(dto.getEmail());
         user.setName(dto.getName());
+        user.setEmail(dto.getEmail());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
-        user.setRole(roleRepository.findByName("ROLE_USER"));
-        userRepository.save(user);
+        user.setType(dto.getType());
+        user.setPhone(dto.getPhone());
+        user.setCity(dto.getCity());
+        user.setState(dto.getState());
+        user.setDescription(dto.getDescription());
+        
+        User savedUser = userRepository.save(user);
+        
+        // Gerar token JWT para o usuário recém-criado
+        String token = jwtService.generateToken(savedUser);
+        
+        return new TokenResponseDto(token);
     }
 
     @Override
-    public TokenResponseDto login(LoginRequestDto login, HttpServletResponse response) {
+    public TokenResponseDto login(LoginRequestDto login) {
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(login.getEmail(), login.getPassword())
+            new UsernamePasswordAuthenticationToken(login.email(), login.password())
         );
-        Jwt accessToken = jwtService.encodeAccessToken(authentication);
-        Jwt refreshToken = jwtService.encodeRefreshToken(authentication);
-        refreshTokenService.saveRefreshToken(refreshToken);
-        setRefreshTokenOnCookie(response, refreshToken.getTokenValue());
-        return new TokenResponseDto(accessToken.getTokenValue());
-    }
 
-    @Override
-    public TokenResponseDto refreshToken(HttpServletRequest request) {
-        String refreshToken = obtainRefreshTokenFromCookie(request);
-        Jwt decodedRefreshToken = jwtService.decodeJwt(refreshToken);
-        if (!this.refreshTokenService.refreshTokenExists(decodedRefreshToken.getId())) {
-            throw new UnauthorizedException("Invalid refresh token");
-        }
-        User user = userRepository.findByEmail(decodedRefreshToken.getSubject())
-            .orElseThrow(() -> new UnauthorizedException("User not found"));
-        Authentication authentication = new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword(), user.getAuthorities());
-        Jwt accessToken = jwtService.encodeAccessToken(authentication);
-        return new TokenResponseDto(accessToken.getTokenValue());
-    }
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String token = jwtService.generateToken(userDetails);
 
-    @Override
-    public void logout(HttpServletRequest request, HttpServletResponse response) {
-        String refreshToken = obtainRefreshTokenFromCookie(request);
-        Jwt decodedRefreshToken = jwtService.decodeJwt(refreshToken);
-        refreshTokenService.deleteRefreshToken(decodedRefreshToken.getId());
-        setRefreshTokenOnCookie(response, "");
-        String bearerToken = request.getHeader("Authorization");
-        Jwt decodedAccessToken = jwtService.decodeJwt(bearerToken.split(" ")[1]);
-        blackListTokenService.addTokenToBlackList(decodedAccessToken);
+        return new TokenResponseDto(token);
     }
-
-    private void setRefreshTokenOnCookie(HttpServletResponse response, String refreshToken) {
-        ResponseCookie cookie = ResponseCookie.from("refresh_token", refreshToken)
-            .path("/")
-            .maxAge(Duration.ofDays(refreshTokenDuration).minusHours(3L))
-            .sameSite("None")
-            .httpOnly(true)
-            .secure(isCookieSecure)
-            .build();
-        response.addHeader("Set-Cookie", cookie.toString());
-    }
-
-    private String obtainRefreshTokenFromCookie(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
-            throw new UnauthorizedException("No refresh cookie");
-        }
-        String refreshToken = null;
-        for (Cookie cookie : cookies) {
-            if (cookie.getName().equals("refresh_token")) {
-                refreshToken = cookie.getValue();
-                break;
-            }
-        }
-        if (refreshToken == null) {
-            throw new UnauthorizedException("No refresh cookie");
-        }
-        return refreshToken;
-    }
-
 }

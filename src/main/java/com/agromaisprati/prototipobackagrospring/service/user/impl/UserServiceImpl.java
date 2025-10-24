@@ -6,7 +6,7 @@ import com.agromaisprati.prototipobackagrospring.controller.mapper.user.UserMapp
 import com.agromaisprati.prototipobackagrospring.model.user.User;
 import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
 import com.agromaisprati.prototipobackagrospring.model.user.UserResponseDto;
-import com.agromaisprati.prototipobackagrospring.repository.role.RoleRepository;
+import com.agromaisprati.prototipobackagrospring.model.user.UserUpdateDto;
 import com.agromaisprati.prototipobackagrospring.repository.user.UserRepository;
 import com.agromaisprati.prototipobackagrospring.service.user.UserService;
 import com.agromaisprati.prototipobackagrospring.validator.user.UserValidator;
@@ -29,7 +29,6 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserValidator userValidator;
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -50,7 +49,6 @@ public class UserServiceImpl implements UserService {
     public UserResponseDto createUser(UserDto dto) {
         userValidator.hasEmail(dto.getEmail());
         User user = UserMapper.toEntity(dto, passwordEncoder);
-        user.setRole(roleRepository.findByName("ROLE_USER"));
         return UserMapper.toDto(userRepository.save(user));
     }
 
@@ -69,6 +67,56 @@ public class UserServiceImpl implements UserService {
         user.setName(dto.getName());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setEmail(dto.getEmail());
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void updateUserPartial(String id, UserUpdateDto dto) {
+        User user = this.userRepository.findById(UUID.fromString(id))
+            .orElseThrow(() -> new NotFoundException("User with id " + id + " not found"));
+        
+        // Verificar email apenas se for fornecido
+        if (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) {
+            Optional<User> userByEmail = this.userRepository.findByEmail(dto.getEmail());
+            if (userByEmail.isPresent()) {
+                boolean isSameUserWithEmail = userByEmail.get().getId().equals(user.getId());
+                if (!isSameUserWithEmail) {
+                    throw new ConflictException("Email is already registered.");
+                }
+            }
+            user.setEmail(dto.getEmail());
+        }
+        
+        // Atualizar apenas os campos fornecidos
+        if (dto.getName() != null && !dto.getName().trim().isEmpty()) {
+            user.setName(dto.getName());
+        }
+        
+        if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        }
+        
+        if (dto.getType() != null) {
+            user.setType(dto.getType());
+        }
+        
+        if (dto.getPhone() != null) {
+            user.setPhone(dto.getPhone());
+        }
+        
+        if (dto.getCity() != null) {
+            user.setCity(dto.getCity());
+        }
+        
+        if (dto.getState() != null) {
+            user.setState(dto.getState());
+        }
+        
+        if (dto.getDescription() != null) {
+            user.setDescription(dto.getDescription());
+        }
+        
         userRepository.save(user);
     }
 
