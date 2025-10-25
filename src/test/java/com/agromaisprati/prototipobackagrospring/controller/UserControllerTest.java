@@ -1,5 +1,6 @@
 package com.agromaisprati.prototipobackagrospring.controller;
 
+import com.agromaisprati.prototipobackagrospring.model.user.AuthProvider;
 import com.agromaisprati.prototipobackagrospring.model.user.TipoUsuario;
 import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
 import com.agromaisprati.prototipobackagrospring.model.user.UserResponseDto;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -58,7 +60,14 @@ public class UserControllerTest {
                 "test@example.com",
                 TipoUsuario.AGRICULTOR,
                 "Porto Alegre",
-                "RS"
+                "RS",
+                "Descrição do usuário de teste",
+                "(51) 99999-9999",
+                AuthProvider.LOCAL,
+                null,
+                null,
+                false,
+                LocalDateTime.now()
         );
     }
 

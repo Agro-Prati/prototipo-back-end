@@ -19,6 +19,11 @@ public class UserMapper {
         user.setEmail(dto.getEmail());
         user.setName(dto.getName());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setType(dto.getType());
+        user.setPhone(dto.getPhone());
+        user.setCity(dto.getCity());
+        user.setState(dto.getState());
+        user.setDescription(dto.getDescription());
         return user;
     }
 }

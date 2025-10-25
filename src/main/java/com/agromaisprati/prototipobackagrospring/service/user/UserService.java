@@ -11,6 +11,7 @@ public interface UserService {
 
     Page<UserResponseDto> findAllUsers(Pageable pageable);
     UserResponseDto findUserById(String id);
+    UserResponseDto findUserByEmail(String email);
     UserResponseDto createUser(UserDto dto);
     void updateUser(String id, UserDto dto);
     void updateUserPartial(String id, UserUpdateDto dto);

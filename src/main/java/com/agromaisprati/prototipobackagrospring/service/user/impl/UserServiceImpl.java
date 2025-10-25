@@ -45,6 +45,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public UserResponseDto findUserByEmail(String email) {
+        return this.userRepository.findByEmail(email)
+            .map(UserMapper::toDto)
+            .orElseThrow(() -> new NotFoundException("User with email " + email + " not found"));
+    }
+
+    @Override
     @Transactional
     public UserResponseDto createUser(UserDto dto) {
         userValidator.hasEmail(dto.getEmail());
@@ -67,6 +75,11 @@ public class UserServiceImpl implements UserService {
         user.setName(dto.getName());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setEmail(dto.getEmail());
+        user.setType(dto.getType());
+        user.setPhone(dto.getPhone());
+        user.setCity(dto.getCity());
+        user.setState(dto.getState());
+        user.setDescription(dto.getDescription());
         userRepository.save(user);
     }
 

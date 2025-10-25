@@ -29,10 +29,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controller para gerenciamento de usuários
- * Endpoints protegidos que requerem autenticação JWT
+ * Controller para gerenciamento administrativo de usuários
+ * Endpoints protegidos que requerem autenticação JWT e permissões administrativas
+ * Para operações do próprio usuário (perfil), utilize o ProfileController
  */
-@Tag(name = "Usuários", description = "Operações de gerenciamento de usuários")
+@Tag(name = "Usuários (Admin)", description = "Operações administrativas de gerenciamento de usuários - requer permissões de administrador")
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/users")
@@ -41,34 +42,39 @@ public class UserController implements GenericController {
 
     private final UserService userService;
 
-    @Operation(summary = "Listar todos os usuários", 
-               description = "Retorna lista paginada de usuários cadastrados")
+    @Operation(summary = "Listar todos os usuários (Admin)", 
+               description = "Retorna lista paginada de todos os usuários cadastrados. Requer permissões administrativas.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Lista de usuários retornada com sucesso"),
-        @ApiResponse(responseCode = "401", description = "Não autorizado - Token inválido ou ausente")
+        @ApiResponse(responseCode = "401", description = "Não autorizado - Token inválido ou ausente"),
+        @ApiResponse(responseCode = "403", description = "Proibido - Sem permissões administrativas")
     })
     @GetMapping
     public ResponseEntity<Page<UserResponseDto>> findAllUsers(Pageable pageable) {
         return ResponseEntity.ok(this.userService.findAllUsers(pageable));
     }
 
-    @Operation(summary = "Buscar usuário por ID", description = "Retorna os dados de um usuário específico")
+    @Operation(summary = "Buscar usuário por ID (Admin)", 
+               description = "Retorna os dados de um usuário específico pelo ID. Requer permissões administrativas.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Usuário encontrado"),
         @ApiResponse(responseCode = "404", description = "Usuário não encontrado"),
-        @ApiResponse(responseCode = "401", description = "Não autorizado")
+        @ApiResponse(responseCode = "401", description = "Não autorizado"),
+        @ApiResponse(responseCode = "403", description = "Proibido - Sem permissões administrativas")
     })
     @GetMapping("/{id}")
     public ResponseEntity<UserResponseDto> findUserById(@PathVariable String id) {
         return ResponseEntity.ok(userService.findUserById(id));
     }
 
-    @Operation(summary = "Criar novo usuário", description = "Cria um novo usuário no sistema")
+    @Operation(summary = "Criar novo usuário (Admin)", 
+               description = "Cria um novo usuário no sistema. Requer permissões administrativas.")
     @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Usuário criado com sucesso"),
         @ApiResponse(responseCode = "400", description = "Dados inválidos"),
         @ApiResponse(responseCode = "409", description = "Email já cadastrado"),
-        @ApiResponse(responseCode = "401", description = "Não autorizado")
+        @ApiResponse(responseCode = "401", description = "Não autorizado"),
+        @ApiResponse(responseCode = "403", description = "Proibido - Sem permissões administrativas")
     })
     @PostMapping
     public ResponseEntity<Void> registerUser(@Valid @RequestBody UserDto dto) {
@@ -76,12 +82,14 @@ public class UserController implements GenericController {
         return ResponseEntity.created(generatorDefaultHeaderLocation(UUID.fromString(user.id()))).build();
     }
 
-    @Operation(summary = "Atualizar usuário completo", description = "Atualiza todos os dados de um usuário existente")
+    @Operation(summary = "Atualizar usuário completo (Admin)", 
+               description = "Atualiza todos os dados de um usuário existente. Requer permissões administrativas.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Usuário atualizado com sucesso"),
         @ApiResponse(responseCode = "404", description = "Usuário não encontrado"),
         @ApiResponse(responseCode = "400", description = "Dados inválidos"),
-        @ApiResponse(responseCode = "401", description = "Não autorizado")
+        @ApiResponse(responseCode = "401", description = "Não autorizado"),
+        @ApiResponse(responseCode = "403", description = "Proibido - Sem permissões administrativas")
     })
     @PutMapping("/{id}")
     public ResponseEntity<Void> updateUser(@PathVariable String id, @Valid @RequestBody UserDto dto) {
@@ -89,12 +97,14 @@ public class UserController implements GenericController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Atualizar usuário parcialmente", description = "Atualiza apenas os campos fornecidos de um usuário existente")
+    @Operation(summary = "Atualizar usuário parcialmente (Admin)", 
+               description = "Atualiza apenas os campos fornecidos de um usuário existente. Requer permissões administrativas.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Usuário atualizado com sucesso"),
         @ApiResponse(responseCode = "404", description = "Usuário não encontrado"),
         @ApiResponse(responseCode = "400", description = "Dados inválidos"),
-        @ApiResponse(responseCode = "401", description = "Não autorizado")
+        @ApiResponse(responseCode = "401", description = "Não autorizado"),
+        @ApiResponse(responseCode = "403", description = "Proibido - Sem permissões administrativas")
     })
     @PatchMapping("/{id}")
     public ResponseEntity<Void> updateUserPartial(@PathVariable String id, @Valid @RequestBody UserUpdateDto dto) {
@@ -102,11 +112,13 @@ public class UserController implements GenericController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "Deletar usuário", description = "Remove um usuário do sistema")
+    @Operation(summary = "Deletar usuário (Admin)", 
+               description = "Remove um usuário do sistema. Requer permissões administrativas.")
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Usuário deletado com sucesso"),
         @ApiResponse(responseCode = "404", description = "Usuário não encontrado"),
-        @ApiResponse(responseCode = "401", description = "Não autorizado")
+        @ApiResponse(responseCode = "401", description = "Não autorizado"),
+        @ApiResponse(responseCode = "403", description = "Proibido - Sem permissões administrativas")
     })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable String id) {
