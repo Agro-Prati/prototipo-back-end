@@ -3,12 +3,14 @@ spring:
     name: prototipo-back-agro-spring
 
   datasource:
+    # Heroku fornece DATABASE_URL automaticamente quando adiciona PostgreSQL
+    # Formato local: jdbc:postgresql://host:port/database
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:agro_prototipo_db}
+    url: ${DATABASE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:agro_prototipo_db}}
   jpa:
-    show-sql: true
+    show-sql: ${JPA_SHOW_SQL:true}
     hibernate:
       ddl-auto: update  # Cria/atualiza tabelas automaticamente
     properties:
