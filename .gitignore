@@ -34,3 +34,8 @@ build/
 
 ### Environment Variables ###
 .env
+
+
+## aux
+
+git add . && git reset *.md

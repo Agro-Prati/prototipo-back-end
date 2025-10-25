@@ -37,12 +37,25 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = true)  // Nullable para usuários OAuth2
     private String password;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private TipoUsuario type;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private AuthProvider authProvider = AuthProvider.LOCAL;
+
+    @Column(unique = true)
+    private String googleId;
+
+    @Column
+    private String profilePictureUrl;
+
+    @Column
+    private Boolean emailVerified = false;
 
     private String phone;
 

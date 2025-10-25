@@ -17,4 +17,15 @@ public interface AuthService {
      * Realiza login e retorna JWT token
      */
     TokenResponseDto login(LoginRequestDto login);
+
+        /**
+     * Processa login OAuth2 do Google
+     * @param email Email do usuário do Google
+     * @param name Nome do usuário do Google
+     * @param googleId ID único do Google
+     * @param picture URL da foto de perfil
+     * @param emailVerified Se o email foi verificado pelo Google
+     * @return Token JWT
+     */
+    TokenResponseDto processOAuth2Login(String email, String name, String googleId, String picture, Boolean emailVerified);
 }

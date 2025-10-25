@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -41,6 +42,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/login/oauth2/code/**").permitAll()
+                        .requestMatchers("/oauth2/**").permitAll()
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -53,6 +56,26 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler((request, response, authentication) -> {
+                            // Extrair informações completas do usuário OAuth2
+                            OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+                            String email = oauth2User.getAttribute("email");
+                            String name = oauth2User.getAttribute("name");
+                            String googleId = oauth2User.getAttribute("sub");  // Google user ID
+                            String picture = oauth2User.getAttribute("picture");  // Profile picture URL
+                            Boolean emailVerified = oauth2User.getAttribute("email_verified");
+                            
+                            // Redirecionar com todos os dados
+                            String redirectUrl = String.format(
+                                "/api/auth/oauth2/success?email=%s&name=%s&googleId=%s&picture=%s&emailVerified=%s",
+                                email, name, googleId, 
+                                picture != null ? picture : "", 
+                                emailVerified != null ? emailVerified : false
+                            );
+                            response.sendRedirect(redirectUrl);
+                        })
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

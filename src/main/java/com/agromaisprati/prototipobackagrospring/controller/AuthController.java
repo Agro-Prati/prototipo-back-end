@@ -15,8 +15,19 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Controller de autenticação - Endpoints públicos para registro e login
+ * 
+ * Para login com Google OAuth2, acesse: GET /oauth2/authorization/google
+ * (esse endpoint é fornecido automaticamente pelo Spring Security)
  */
-@Tag(name = "Autenticação", description = "Endpoints públicos para registro e login de usuários")
+@Tag(name = "Autenticação", description = """
+    Endpoints públicos para registro e login de usuários.
+    
+    **Login com Google OAuth2:**
+    Para fazer login com Google, acesse diretamente no navegador:
+    `GET /oauth2/authorization/google`
+    
+    Este endpoint redireciona para o Google, e após autenticação retorna um JWT.
+    """)
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -46,5 +57,26 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<TokenResponseDto> login(@Valid @RequestBody LoginRequestDto login) {
         return ResponseEntity.ok(authService.login(login));
+    }
+
+    @Operation(
+        summary = "⚠️ Callback OAuth2 (NÃO USAR MANUALMENTE)", 
+        description = "⚠️ Este endpoint é chamado automaticamente pelo Spring Security após login com Google. " +
+                      "Para fazer login com Google, use: GET /oauth2/authorization/google",
+        hidden = true  // Esconde do Swagger UI
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "302", description = "Redireciona para frontend com JWT"),
+        @ApiResponse(responseCode = "401", description = "Falha na autenticação OAuth2")
+    })
+    @GetMapping("/oauth2/success")
+    public ResponseEntity<TokenResponseDto> oauth2Success(
+            @RequestParam String email,
+            @RequestParam String name,
+            @RequestParam String googleId,
+            @RequestParam(required = false) String picture,
+            @RequestParam(defaultValue = "false") Boolean emailVerified) {
+        TokenResponseDto response = authService.processOAuth2Login(email, name, googleId, picture, emailVerified);
+        return ResponseEntity.ok(response);
     }
 }
