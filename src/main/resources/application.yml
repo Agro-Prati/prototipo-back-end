@@ -51,6 +51,10 @@ jwt:
   secret: ${JWT_SECRET:agromais-default-secret-key-change-in-production}
   expiration: ${JWT_EXPIRATION:86400000}
 
+# Google OAuth2 Configuration
+google:
+  client-id: ${GOOGLE_CLIENT_ID:35109038528-9h7bu01o8r3gauukoo5938bc0npfd4vl.apps.googleusercontent.com}
+
 server:
   port: ${SERVER_PORT:8080}
 

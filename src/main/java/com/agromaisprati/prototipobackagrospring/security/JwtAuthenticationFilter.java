@@ -3,6 +3,7 @@ package com.agromaisprati.prototipobackagrospring.security;
 import com.agromaisprati.prototipobackagrospring.service.auth.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * Filtro JWT simplificado para autenticação
+ * Filtro JWT que suporta token via Authorization header (Bearer) ou Cookie HTTP-only
  */
 @Component
 @RequiredArgsConstructor
@@ -34,19 +35,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         
-        final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String userEmail;
-
-        // Se não tem header ou não começa com Bearer, passa adiante
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        String jwt = extractJwtToken(request);
+        
+        // Se não tem token, passa adiante
+        if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Extrai o token
-        jwt = authHeader.substring(7);
-        userEmail = jwtService.extractUsername(jwt);
+        // Extrai email do token
+        String userEmail = jwtService.extractUsername(jwt);
 
         // Se tem email e ainda não está autenticado
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -64,5 +62,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Extrai JWT do Authorization header (Bearer) ou Cookie (JWT_TOKEN)
+     */
+    private String extractJwtToken(HttpServletRequest request) {
+        // Primeiro tenta pegar do Authorization header
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+
+        // Se não tem no header, tenta pegar do cookie
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("JWT_TOKEN".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+
+        return null;
     }
 }

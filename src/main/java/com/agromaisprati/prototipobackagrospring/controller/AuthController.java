@@ -1,5 +1,6 @@
 package com.agromaisprati.prototipobackagrospring.controller;
 
+import com.agromaisprati.prototipobackagrospring.model.auth.GoogleTokenRequestDto;
 import com.agromaisprati.prototipobackagrospring.model.auth.LoginRequestDto;
 import com.agromaisprati.prototipobackagrospring.model.auth.TokenResponseDto;
 import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
@@ -16,17 +17,13 @@ import org.springframework.web.bind.annotation.*;
 /**
  * Controller de autenticação - Endpoints públicos para registro e login
  * 
- * Para login com Google OAuth2, acesse: GET /oauth2/authorization/google
- * (esse endpoint é fornecido automaticamente pelo Spring Security)
+ * Suporta login com credenciais e Google Sign-In (ID Token)
  */
 @Tag(name = "Autenticação", description = """
     Endpoints públicos para registro e login de usuários.
     
-    **Login com Google OAuth2:**
-    Para fazer login com Google, acesse diretamente no navegador:
-    `GET /oauth2/authorization/google`
-    
-    Este endpoint redireciona para o Google, e após autenticação retorna um JWT.
+    **Login com Google Sign-In:**
+    Use o endpoint POST /api/auth/google enviando o ID Token do Google.
     """)
 @RestController
 @RequestMapping("/api/auth")
@@ -60,23 +57,45 @@ public class AuthController {
     }
 
     @Operation(
-        summary = "⚠️ Callback OAuth2 (NÃO USAR MANUALMENTE)", 
-        description = "⚠️ Este endpoint é chamado automaticamente pelo Spring Security após login com Google. " +
-                      "Para fazer login com Google, use: GET /oauth2/authorization/google",
-        hidden = true  // Esconde do Swagger UI
+        summary = "Login com Google Sign-In",
+        description = "Valida o ID Token do Google e retorna JWT com dados do usuário"
     )
     @ApiResponses({
-        @ApiResponse(responseCode = "302", description = "Redireciona para frontend com JWT"),
-        @ApiResponse(responseCode = "401", description = "Falha na autenticação OAuth2")
+        @ApiResponse(responseCode = "200", description = "Login realizado com sucesso"),
+        @ApiResponse(responseCode = "400", description = "Token inválido"),
+        @ApiResponse(responseCode = "500", description = "Erro ao validar token do Google")
     })
-    @GetMapping("/oauth2/success")
-    public ResponseEntity<TokenResponseDto> oauth2Success(
-            @RequestParam String email,
-            @RequestParam String name,
-            @RequestParam String googleId,
-            @RequestParam(required = false) String picture,
-            @RequestParam(defaultValue = "false") Boolean emailVerified) {
-        TokenResponseDto response = authService.processOAuth2Login(email, name, googleId, picture, emailVerified);
+    @PostMapping("/google")
+    public ResponseEntity<TokenResponseDto> loginWithGoogle(@Valid @RequestBody GoogleTokenRequestDto request) {
+        TokenResponseDto response = authService.loginWithGoogleToken(request.credential());
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+        summary = "Obter dados do usuário autenticado",
+        description = "Retorna os dados do usuário autenticado pelo JWT (cookie ou header)"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Dados do usuário retornados com sucesso"),
+        @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> getCurrentUser(
+            @CookieValue(name = "JWT_TOKEN", required = false) String jwtFromCookie,
+            @RequestHeader(name = "Authorization", required = false) String authHeader) {
+        
+        String jwt = jwtFromCookie;
+        
+        // Se não tem cookie, tenta pegar do header Authorization
+        if (jwt == null && authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
+        }
+        
+        if (jwt == null) {
+            return ResponseEntity.status(401).build();
+        }
+        
+        UserDto user = authService.getUserFromToken(jwt);
+        return ResponseEntity.ok(user);
     }
 }
