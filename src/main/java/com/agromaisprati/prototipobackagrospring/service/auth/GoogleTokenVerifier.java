@@ -23,6 +23,9 @@ public class GoogleTokenVerifier {
      */
     public GoogleIdToken.Payload verifyToken(String idTokenString) {
         try {
+            System.out.println("Google Client ID configurado: " + googleClientId);
+            System.out.println("Token recebido: " + idTokenString.substring(0, Math.min(50, idTokenString.length())) + "...");
+            
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                 new NetHttpTransport(),
                 new GsonFactory()
