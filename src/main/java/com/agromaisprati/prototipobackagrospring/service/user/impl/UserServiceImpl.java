@@ -3,6 +3,7 @@ package com.agromaisprati.prototipobackagrospring.service.user.impl;
 import com.agromaisprati.prototipobackagrospring.controller.exceptions.ConflictException;
 import com.agromaisprati.prototipobackagrospring.controller.exceptions.NotFoundException;
 import com.agromaisprati.prototipobackagrospring.controller.mapper.user.UserMapper;
+import com.agromaisprati.prototipobackagrospring.model.user.TipoUsuario;
 import com.agromaisprati.prototipobackagrospring.model.user.User;
 import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
 import com.agromaisprati.prototipobackagrospring.model.user.UserResponseDto;
@@ -13,14 +14,18 @@ import com.agromaisprati.prototipobackagrospring.validator.user.UserValidator;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -142,4 +147,33 @@ public class UserServiceImpl implements UserService {
         this.userRepository.deleteById(UUID.fromString(id));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserResponseDto> findProfessionalsByType(TipoUsuario type, int limit) {
+        Pageable pageable = PageRequest.of(0, limit);
+        return this.userRepository.findByType(type, pageable)
+            .stream()
+            .map(UserMapper::toDto)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserResponseDto> findProfessionalsByTypes(String[] types, int limit) {
+        List<UserResponseDto> allProfessionals = new ArrayList<>();
+        
+        for (String typeStr : types) {
+            try {
+                TipoUsuario type = TipoUsuario.valueOf(typeStr.trim().toUpperCase());
+                List<UserResponseDto> professionals = findProfessionalsByType(type, limit);
+                allProfessionals.addAll(professionals);
+            } catch (IllegalArgumentException e) {
+                // Ignora tipos inválidos
+            }
+        }
+        
+        return allProfessionals;
+    }
+
 }
+
