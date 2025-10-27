@@ -1,12 +1,32 @@
 package com.agromaisprati.prototipobackagrospring.service.auth;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.Date;
+
+/**
+ * Interface simplificada para operações JWT
+ */
 public interface JwtService {
 
-    Jwt encodeAccessToken(Authentication authentication);
-    Jwt encodeRefreshToken(Authentication authentication);
-    Jwt decodeJwt(String token);
+    /**
+     * Gera um token JWT para o usuário
+     */
+    String generateToken(UserDetails userDetails);
+
+    /**
+     * Extrai o username do token
+     */
+    String extractUsername(String token);
+
+    /**
+     * Extrai a data de expiração do token
+     */
+    Date extractExpiration(String token);
+
+    /**
+     * Valida o token
+     */
+    Boolean validateToken(String token, UserDetails userDetails);
 
 }

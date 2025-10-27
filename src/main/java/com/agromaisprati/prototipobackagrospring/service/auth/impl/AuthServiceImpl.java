@@ -1,127 +1,178 @@
 package com.agromaisprati.prototipobackagrospring.service.auth.impl;
 
-import java.time.Duration;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseCookie;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.stereotype.Service;
-
-import com.agromaisprati.prototipobackagrospring.controller.exceptions.UnauthorizedException;
 import com.agromaisprati.prototipobackagrospring.model.auth.LoginRequestDto;
 import com.agromaisprati.prototipobackagrospring.model.auth.TokenResponseDto;
+import com.agromaisprati.prototipobackagrospring.model.user.AuthProvider;
+import com.agromaisprati.prototipobackagrospring.model.user.TipoUsuario;
 import com.agromaisprati.prototipobackagrospring.model.user.User;
 import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
-import com.agromaisprati.prototipobackagrospring.repository.role.RoleRepository;
+import com.agromaisprati.prototipobackagrospring.model.user.UserResponseDto;
 import com.agromaisprati.prototipobackagrospring.repository.user.UserRepository;
 import com.agromaisprati.prototipobackagrospring.service.auth.AuthService;
-import com.agromaisprati.prototipobackagrospring.service.auth.BlackListTokenService;
+import com.agromaisprati.prototipobackagrospring.service.auth.GoogleTokenVerifier;
 import com.agromaisprati.prototipobackagrospring.service.auth.JwtService;
-import com.agromaisprati.prototipobackagrospring.service.auth.RefreshTokenService;
-import com.agromaisprati.prototipobackagrospring.validator.user.UserValidator;
-
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final RefreshTokenService refreshTokenService;
-    private final BlackListTokenService blackListTokenService;
     private final AuthenticationManager authenticationManager;
-    private final UserValidator userValidator;
-
-    @Value("${jwt.refresh-token.duration}")
-    private int refreshTokenDuration;
-    @Value("${jwt.cookie.secure}")
-    private boolean isCookieSecure;
+    private final GoogleTokenVerifier googleTokenVerifier;
 
     @Override
-    public void register(UserDto dto) {
-        userValidator.hasEmail(dto.getEmail());
+    public TokenResponseDto register(UserDto dto) {
+        // Validar se email já existe
+        if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
+            throw new RuntimeException("Email já cadastrado");
+        }
+
         User user = new User();
-        user.setEmail(dto.getEmail());
         user.setName(dto.getName());
+        user.setEmail(dto.getEmail());
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
-        user.setRole(roleRepository.findByName("ROLE_USER"));
-        userRepository.save(user);
+        user.setType(dto.getType());
+        user.setAuthProvider(AuthProvider.LOCAL);  // Registro tradicional
+        user.setEmailVerified(false);  // Email não verificado por padrão
+        user.setPhone(dto.getPhone());
+        user.setCity(dto.getCity());
+        user.setState(dto.getState());
+        user.setDescription(dto.getDescription());
+        
+        User savedUser = userRepository.save(user);
+        
+        // Gerar token JWT para o usuário recém-criado
+        String token = jwtService.generateToken(savedUser);
+        
+        // Converter User para UserResponseDto para retornar
+        UserResponseDto userResponseDto = new UserResponseDto(savedUser);
+        
+        return new TokenResponseDto(token, userResponseDto);
     }
 
     @Override
-    public TokenResponseDto login(LoginRequestDto login, HttpServletResponse response) {
-        Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(login.getEmail(), login.getPassword())
+    public TokenResponseDto login(LoginRequestDto login) {
+        // Autenticar usuário
+        authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(login.email(), login.password())
         );
-        Jwt accessToken = jwtService.encodeAccessToken(authentication);
-        Jwt refreshToken = jwtService.encodeRefreshToken(authentication);
-        refreshTokenService.saveRefreshToken(refreshToken);
-        setRefreshTokenOnCookie(response, refreshToken.getTokenValue());
-        return new TokenResponseDto(accessToken.getTokenValue());
+
+        User user = userRepository.findByEmail(login.email())
+            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+        
+        String token = jwtService.generateToken(user);
+        
+        // Converter User para UserResponseDto para retornar
+        UserResponseDto userResponseDto = new UserResponseDto(user);
+
+        return new TokenResponseDto(token, userResponseDto);
     }
 
     @Override
-    public TokenResponseDto refreshToken(HttpServletRequest request) {
-        String refreshToken = obtainRefreshTokenFromCookie(request);
-        Jwt decodedRefreshToken = jwtService.decodeJwt(refreshToken);
-        if (!this.refreshTokenService.refreshTokenExists(decodedRefreshToken.getId())) {
-            throw new UnauthorizedException("Invalid refresh token");
+    public TokenResponseDto processOAuth2Login(String email, String name, String googleId, String picture, Boolean emailVerified) {
+        // Buscar usuário existente por Google ID ou email
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            // Se não existir, criar novo usuário com dados do Google
+            User newUser = new User();
+            newUser.setName(name);
+            newUser.setEmail(email);
+            newUser.setGoogleId(googleId);
+            newUser.setProfilePictureUrl(picture);
+            newUser.setEmailVerified(emailVerified != null ? emailVerified : false);
+            newUser.setAuthProvider(AuthProvider.GOOGLE);
+            newUser.setPassword(null);  // Usuário OAuth2 não tem senha local
+            newUser.setType(TipoUsuario.AGRICULTOR); // Tipo padrão para OAuth2
+            return userRepository.save(newUser);
+        });
+        
+        // Se usuário já existe mas não tem Google ID, atualizar
+        if (user.getGoogleId() == null && googleId != null) {
+            user.setGoogleId(googleId);
+            user.setProfilePictureUrl(picture);
+            user.setEmailVerified(emailVerified != null ? emailVerified : false);
+            user.setAuthProvider(AuthProvider.GOOGLE);
+            userRepository.save(user);
         }
-        User user = userRepository.findByEmail(decodedRefreshToken.getSubject())
-            .orElseThrow(() -> new UnauthorizedException("User not found"));
-        Authentication authentication = new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword(), user.getAuthorities());
-        Jwt accessToken = jwtService.encodeAccessToken(authentication);
-        return new TokenResponseDto(accessToken.getTokenValue());
+
+        // Gerar token JWT
+        String token = jwtService.generateToken(user);
+        
+        // Converter User para UserResponseDto para retornar
+        UserResponseDto userResponseDto = new UserResponseDto(user);
+        
+        return new TokenResponseDto(token, userResponseDto);
     }
 
     @Override
-    public void logout(HttpServletRequest request, HttpServletResponse response) {
-        String refreshToken = obtainRefreshTokenFromCookie(request);
-        Jwt decodedRefreshToken = jwtService.decodeJwt(refreshToken);
-        refreshTokenService.deleteRefreshToken(decodedRefreshToken.getId());
-        setRefreshTokenOnCookie(response, "");
-        String bearerToken = request.getHeader("Authorization");
-        Jwt decodedAccessToken = jwtService.decodeJwt(bearerToken.split(" ")[1]);
-        blackListTokenService.addTokenToBlackList(decodedAccessToken);
+    public UserDto getUserFromToken(String jwt) {
+        // Extrair email do token
+        String email = jwtService.extractUsername(jwt);
+        
+        // Buscar usuário no banco
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+        
+        // Converter para DTO e retornar (sem senha)
+        UserDto dto = new UserDto();
+        dto.setName(user.getName());
+        dto.setEmail(user.getEmail());
+        dto.setPassword(null);  // Não retornar senha
+        dto.setType(user.getType());
+        dto.setPhone(user.getPhone());
+        dto.setCity(user.getCity());
+        dto.setState(user.getState());
+        dto.setDescription(user.getDescription());
+        
+        return dto;
     }
 
-    private void setRefreshTokenOnCookie(HttpServletResponse response, String refreshToken) {
-        ResponseCookie cookie = ResponseCookie.from("refresh_token", refreshToken)
-            .path("/")
-            .maxAge(Duration.ofDays(refreshTokenDuration).minusHours(3L))
-            .sameSite("None")
-            .httpOnly(true)
-            .secure(isCookieSecure)
-            .build();
-        response.addHeader("Set-Cookie", cookie.toString());
+    @Override
+    public TokenResponseDto loginWithGoogleToken(String idToken) {
+        // Validar token do Google
+        GoogleIdToken.Payload payload = googleTokenVerifier.verifyToken(idToken);
+        
+        // Extrair dados do usuário
+        String email = payload.getEmail();
+        String name = (String) payload.get("name");
+        String googleId = payload.getSubject();
+        String picture = (String) payload.get("picture");
+        Boolean emailVerified = payload.getEmailVerified();
+        
+        // Buscar ou criar usuário
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            User newUser = new User();
+            newUser.setName(name);
+            newUser.setEmail(email);
+            newUser.setGoogleId(googleId);
+            newUser.setProfilePictureUrl(picture);
+            newUser.setEmailVerified(emailVerified != null ? emailVerified : false);
+            newUser.setAuthProvider(AuthProvider.GOOGLE);
+            newUser.setPassword(null);
+            newUser.setType(TipoUsuario.AGRICULTOR);
+            return userRepository.save(newUser);
+        });
+        
+        // Atualizar dados do Google se necessário
+        if (user.getGoogleId() == null && googleId != null) {
+            user.setGoogleId(googleId);
+            user.setProfilePictureUrl(picture);
+            user.setEmailVerified(emailVerified != null ? emailVerified : false);
+            user.setAuthProvider(AuthProvider.GOOGLE);
+            userRepository.save(user);
+        }
+        
+        // Gerar token JWT
+        String token = jwtService.generateToken(user);
+        UserResponseDto userResponseDto = new UserResponseDto(user);
+        
+        return new TokenResponseDto(token, userResponseDto);
     }
-
-    private String obtainRefreshTokenFromCookie(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
-            throw new UnauthorizedException("No refresh cookie");
-        }
-        String refreshToken = null;
-        for (Cookie cookie : cookies) {
-            if (cookie.getName().equals("refresh_token")) {
-                refreshToken = cookie.getValue();
-                break;
-            }
-        }
-        if (refreshToken == null) {
-            throw new UnauthorizedException("No refresh cookie");
-        }
-        return refreshToken;
-    }
-
 }

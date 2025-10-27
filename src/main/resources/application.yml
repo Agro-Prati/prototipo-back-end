@@ -3,32 +3,64 @@ spring:
     name: prototipo-back-agro-spring
 
   datasource:
-    username: postgres
-    password: postgres
+    # Heroku fornece DATABASE_URL automaticamente quando adiciona PostgreSQL
+    # Formato local: jdbc:postgresql://host:port/database
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5433/agro_prototipo_db
+    url: ${DATABASE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:agro_prototipo_db}}
   jpa:
-    show-sql: true
+    show-sql: ${JPA_SHOW_SQL:true}
     hibernate:
-      ddl-auto: none
+      ddl-auto: update  # Cria/atualiza tabelas automaticamente
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-  cache:
-    type: redis
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:your-google-client-id-here}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your-google-client-secret-here}
+            scope:
+              - email
+              - profile
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/auth
+            token-uri: https://www.googleapis.com/oauth2/v3/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-name-attribute: sub
+
+# Configuração do Swagger/OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+  # Desabilita os parâmetros automáticos do Pageable no Swagger UI
+  show-actuator: false
+  model-and-view-allowed: false
 
 jwt:
-  secret: ${JWT_SECRET:N7p3xY9kL4tQ2sM8uB5jH0zR6cA1vF7g}
-  access-token:
-    duration: ${ACCESS_TOKEN_DURATION:1}
-  refresh-token:
-    duration: ${REFRESH_TOKEN_DURATION:30}
-  cookie:
-    secure: ${JWT_COOKIE_SECURE:false}
+  secret: ${JWT_SECRET:agromais-dev-secret-key-2025-make-it-long-enough-for-security-minimum-256-bits}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# Google OAuth2 Configuration
+google:
+  client-id: ${GOOGLE_CLIENT_ID:your-google-client-id-here}
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
+
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:INFO}
+    com.agromaisprati: ${LOGGING_LEVEL_COM_AGROMAISPRATI:INFO}

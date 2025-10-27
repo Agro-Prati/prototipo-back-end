@@ -1,38 +1,35 @@
 services:
   agro-db:
-    image: postgres:latest
+    image: postgres:15
+    container_name: agro-db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: agro_prototipo_db
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-agro_prototipo_db}
     networks:
       - agro-network
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
 
   agro-pgadmin:
     image: dpage/pgadmin4:latest
+    container_name: agro-pgadmin
     depends_on:
       - agro-db
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_LISTEN_PORT: 80
     ports:
-      - "80:80"
-    restart: always
+      - "${PGADMIN_PORT:-8081}:80"
+    restart: unless-stopped
     networks:
       - agro-network
-
-  redis:
-    image: redis:6.2
-    container_name: redis
-    ports:
-      - "6379:6379"
-    networks:
-      - agro-network
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
 
 networks:
   agro-network:
@@ -40,3 +37,4 @@ networks:
 
 volumes:
   pgdata:
+  pgadmin-data:

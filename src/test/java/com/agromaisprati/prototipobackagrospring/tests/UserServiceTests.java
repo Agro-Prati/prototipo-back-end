@@ -31,7 +31,6 @@ import com.agromaisprati.prototipobackagrospring.factories.UserFactory;
 import com.agromaisprati.prototipobackagrospring.model.user.User;
 import com.agromaisprati.prototipobackagrospring.model.user.UserDto;
 import com.agromaisprati.prototipobackagrospring.model.user.UserResponseDto;
-import com.agromaisprati.prototipobackagrospring.repository.role.RoleRepository;
 import com.agromaisprati.prototipobackagrospring.repository.user.UserRepository;
 import com.agromaisprati.prototipobackagrospring.service.user.impl.UserServiceImpl;
 import com.agromaisprati.prototipobackagrospring.validator.user.UserValidator;
@@ -47,8 +46,6 @@ public class UserServiceTests {
     private UserValidator userValidator;
     @Mock
     private UserRepository userRepository;
-    @Mock
-    private RoleRepository roleRepository;
 
     private User user;
     private UserDto userDto;
